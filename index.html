@@ -1,380 +1,236 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>照片表格→PDF 產生器</title>
-  <style>
-    body { font-family: system-ui, -apple-system, "Noto Sans TC", "Microsoft JhengHei", sans-serif; margin: 24px; }
-    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
-    label { display: grid; gap: 6px; font-size: 14px; }
-    input[type="number"], select { padding: 8px; border: 1px solid #ccc; border-radius: 8px; min-width: 120px; }
-    input[type="file"] { padding: 6px; }
-    button { padding: 10px 14px; border: 0; border-radius: 10px; cursor: pointer; }
-    button.primary { background: #111; color: #fff; }
-    button.secondary { background: #eee; }
-    button:disabled { opacity: .45; cursor: not-allowed; }
-    .hint { color: #555; margin-top: 10px; line-height: 1.6; }
-    .preview { margin-top: 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-    .card { border: 1px solid #ddd; border-radius: 12px; padding: 10px; }
-    .thumb { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 10px; background: #f5f5f5; }
-    .fn { font-size: 12px; color: #333; margin-top: 6px; word-break: break-all; }
-    .bar { margin-top: 16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .status { font-size: 14px; color: #333; }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>照片表格 → PDF 產生器</title>
 
-  <!-- jsPDF + autoTable (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<style>
+body{font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;margin:24px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+label{display:grid;gap:6px;font-size:14px}
+input[type="number"],input[type="text"],select{
+padding:8px;border:1px solid #ccc;border-radius:8px;min-width:120px}
+input[type="file"]{padding:6px}
+button{padding:10px 14px;border:0;border-radius:10px;cursor:pointer}
+button.primary{background:#111;color:#fff}
+button.secondary{background:#eee}
+button:disabled{opacity:.45;cursor:not-allowed}
+.preview{margin-top:18px;display:grid;
+grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.card{border:1px solid #ddd;border-radius:12px;padding:10px}
+.thumb{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;background:#f5f5f5}
+.fn{font-size:12px;margin-top:6px;word-break:break-all}
+.bar{margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.status{font-size:14px;color:#333}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 </head>
 
 <body>
-  <h2>一鍵匯入照片 → 自動排表格 → 匯出 PDF</h2>
 
-  <div class="row">
-    <label>
-      匯入照片（可多選）
-      <input id="files" type="file" accept="image/*" multiple />
-    </label>
+<h2>照片 → 表格 → PDF</h2>
 
-    <label>
-      PDF 紙張
-      <select id="pageSize">
-        <option value="a4">A4</option>
-        <option value="letter">Letter</option>
-      </select>
-    </label>
+<div class="row">
+<label>匯入照片
+<input id="files" type="file" accept="image/*" multiple>
+</label>
 
-    <label>
-      方向
-      <select id="orientation">
-        <option value="p">直式</option>
-        <option value="l">橫式</option>
-      </select>
-    </label>
+<label>PDF 檔名
+<input id="fileNameInput" type="text" placeholder="例如：通譯紀錄.pdf">
+</label>
 
-    <label>
-      每列幾張
-      <input id="cols" type="number" min="1" max="6" value="3" />
-    </label>
+<label>每列幾張
+<input id="cols" type="number" min="1" max="6" value="3">
+</label>
 
-    <label>
-      格子寬度（mm）
-      <input id="cellW" type="number" min="20" max="90" value="55" />
-    </label>
+<label>格子寬(mm)
+<input id="cellW" type="number" value="55">
+</label>
 
-    <label>
-      格子高度（mm）
-      <input id="cellH" type="number" min="20" max="120" value="55" />
-    </label>
+<label>格子高(mm)
+<input id="cellH" type="number" value="55">
+</label>
+</div>
 
-    <label>
-      外框線
-      <select id="border">
-        <option value="1">要</option>
-        <option value="0">不要</option>
-      </select>
-    </label>
+<div class="bar">
+<button class="secondary" id="clearBtn">清空</button>
+<button class="primary" id="genBtn">產生 PDF</button>
+<button class="primary" id="shareBtn" disabled>分享 LINE</button>
+<span class="status" id="status"></span>
+</div>
 
-    <label>
-      印檔名
-      <select id="printName">
-        <option value="1">要</option>
-        <option value="0">不要</option>
-      </select>
-    </label>
-  </div>
-
-  <div class="bar">
-    <button class="secondary" id="clearBtn">清空</button>
-    <button class="primary" id="genBtn">產生 PDF</button>
-    <button class="primary" id="shareBtn" disabled>分享 LINE</button>
-    <span class="status" id="status"></span>
-  </div>
-
-  <div class="hint">
-    小提示：若照片很多、解析度很高，產生 PDF 會比較久。你也可以把「格子大小」調小或每列多放幾張，檔案會更輕。
-  </div>
-
-  <div class="preview" id="preview"></div>
+<div class="preview" id="preview"></div>
 
 <script>
-  const filesEl = document.getElementById('files');
-  const previewEl = document.getElementById('preview');
-  const statusEl = document.getElementById('status');
-  const clearBtn = document.getElementById('clearBtn');
-  const genBtn = document.getElementById('genBtn');
-  const shareBtn = document.getElementById('shareBtn');
+const filesEl=document.getElementById('files');
+const previewEl=document.getElementById('preview');
+const statusEl=document.getElementById('status');
+const genBtn=document.getElementById('genBtn');
+const clearBtn=document.getElementById('clearBtn');
+const shareBtn=document.getElementById('shareBtn');
 
-  let images = []; // { name, dataUrl, w, h }
+let images=[];
+let latestPdfBlob=null;
+let latestFileName=null;
 
-  // 暫存最新 PDF，供「分享 LINE」按鈕使用
-  let latestPdfBlob = null;
-  let latestFileName = null;
+function setStatus(msg){statusEl.textContent=msg||'';}
 
-  function setStatus(msg) { statusEl.textContent = msg || ''; }
+function sanitizeFileName(name){
+if(!name)return'photos_table.pdf';
+let safe=name.trim().replace(/[\\/:*?"<>|]/g,'-');
+if(!safe.toLowerCase().endsWith('.pdf'))safe+='.pdf';
+return safe;
+}
 
-  function readFileAsDataURL(file) {
-    return new Promise((resolve, reject) => {
-      const fr = new FileReader();
-      fr.onload = () => resolve(fr.result);
-      fr.onerror = reject;
-      fr.readAsDataURL(file);
-    });
-  }
+function isDesktop(){
+const ua=navigator.userAgent||'';
+return /Win|Mac|Linux/.test(ua)&&!/Android|iPhone|iPad|iPod/.test(ua);
+}
 
-  function loadImageMeta(dataUrl) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
-      img.onerror = reject;
-      img.src = dataUrl;
-    });
-  }
+function downloadBlob(blob,name){
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a');
+a.href=url;a.download=name;
+document.body.appendChild(a);
+a.click();
+a.remove();
+setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
 
-  function renderPreview() {
-    previewEl.innerHTML = '';
-    for (const it of images) {
-      const card = document.createElement('div');
-      card.className = 'card';
-      const im = document.createElement('img');
-      im.className = 'thumb';
-      im.src = it.dataUrl;
-      const fn = document.createElement('div');
-      fn.className = 'fn';
-      fn.textContent = it.name;
-      card.appendChild(im);
-      card.appendChild(fn);
-      previewEl.appendChild(card);
-    }
-  }
+function readFile(file){
+return new Promise((res,rej)=>{
+const fr=new FileReader();
+fr.onload=()=>res(fr.result);
+fr.onerror=rej;
+fr.readAsDataURL(file);
+});
+}
 
-  filesEl.addEventListener('change', async (e) => {
-    const fileList = Array.from(e.target.files || []);
-    if (!fileList.length) return;
+function resize(dataUrl,maxPx){
+return new Promise((res,rej)=>{
+const img=new Image();
+img.onload=()=>{
+const scale=Math.min(1,maxPx/Math.max(img.naturalWidth,img.naturalHeight));
+const w=img.naturalWidth*scale;
+const h=img.naturalHeight*scale;
+const c=document.createElement('canvas');
+c.width=w;c.height=h;
+c.getContext('2d').drawImage(img,0,0,w,h);
+res(c.toDataURL('image/png'));
+};
+img.onerror=rej;
+img.src=dataUrl;
+});
+}
 
-    setStatus('讀取照片中…');
-    try {
-      for (const f of fileList) {
-        const dataUrl = await readFileAsDataURL(f);
-        const meta = await loadImageMeta(dataUrl);
-        images.push({ name: f.name, dataUrl, w: meta.w, h: meta.h });
-      }
-      renderPreview();
-      setStatus(`已匯入 ${images.length} 張`);
+filesEl.addEventListener('change',async e=>{
+const list=Array.from(e.target.files||[]);
+for(const f of list){
+const d=await readFile(f);
+images.push({name:f.name,dataUrl:d});
+}
+renderPreview();
+shareBtn.disabled=true;
+latestPdfBlob=null;
+filesEl.value='';
+});
 
-      // 新匯入照片後，之前的 PDF 就不一定對了：先讓分享鈕失效
-      latestPdfBlob = null;
-      latestFileName = null;
-      shareBtn.disabled = true;
+function renderPreview(){
+previewEl.innerHTML='';
+for(const i of images){
+const div=document.createElement('div');
+div.className='card';
+div.innerHTML=`<img class="thumb" src="${i.dataUrl}">
+<div class="fn">${i.name}</div>`;
+previewEl.appendChild(div);
+}
+}
 
-    } catch (err) {
-      console.error(err);
-      setStatus('讀取失敗，請換一批照片試試');
-    } finally {
-      // 讓同一批檔案可重選
-      filesEl.value = '';
-    }
-  });
+clearBtn.onclick=()=>{
+images=[];
+renderPreview();
+shareBtn.disabled=true;
+latestPdfBlob=null;
+setStatus('已清空');
+};
 
-  clearBtn.addEventListener('click', () => {
-    images = [];
-    renderPreview();
-    setStatus('已清空');
+genBtn.addEventListener('click',async()=>{
+if(!images.length){setStatus('請先匯入照片');return;}
 
-    latestPdfBlob = null;
-    latestFileName = null;
-    shareBtn.disabled = true;
-  });
+setStatus('生成中...');
+shareBtn.disabled=true;
 
-  // 把 dataURL 縮到適合 cell 的像素大小（避免 PDF 太肥）
-  async function resizeDataUrlToFit(dataUrl, maxPx) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxPx / Math.max(img.naturalWidth, img.naturalHeight));
-        const tw = Math.max(1, Math.round(img.naturalWidth * scale));
-        const th = Math.max(1, Math.round(img.naturalHeight * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = tw; canvas.height = th;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, tw, th);
-        // 用 PNG（你原本也是 PNG）。若想更小可改 'image/jpeg' + 品質 0.8
-        resolve(canvas.toDataURL('image/png'));
-      };
-      img.onerror = reject;
-      img.src = dataUrl;
-    });
-  }
+const {jsPDF}=window.jspdf;
+const doc=new jsPDF({unit:'mm',format:'a4'});
 
-  async function trySharePdfBlob(blob, filename) {
-    const file = new File([blob], filename, { type: 'application/pdf' });
+const cols=parseInt(document.getElementById('cols').value||3);
+const cellW=parseInt(document.getElementById('cellW').value||55);
+const cellH=parseInt(document.getElementById('cellH').value||55);
 
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({
-          title: filename,
-          text: '我分享一個PDF檔給你',
-          files: [file],
-        });
-        return true;
-      } catch (err) {
-        // 使用者取消也會進來，不當成致命錯誤
-        console.log('share cancelled/failed:', err);
-        return false;
-      }
-    }
-    return false;
-  }
+const maxPx=Math.max(cellW,cellH)*10;
+const resized=[];
 
-  function downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  }
+for(let i=0;i<images.length;i++){
+setStatus(`處理 ${i+1}/${images.length}`);
+const d=await resize(images[i].dataUrl,maxPx);
+resized.push(d);
+}
 
-  genBtn.addEventListener('click', async () => {
-    if (!images.length) {
-      setStatus('請先匯入照片');
-      return;
-    }
+let x=15,y=15;
+let count=0;
 
-    // 產生時先鎖住分享按鈕避免誤按
-    shareBtn.disabled = true;
-    latestPdfBlob = null;
-    latestFileName = null;
+for(let i=0;i<resized.length;i++){
+doc.addImage(resized[i],'PNG',x,y,cellW,cellH);
+x+=cellW+5;
+count++;
 
-    const cols = Math.max(1, Math.min(6, parseInt(document.getElementById('cols').value || '3', 10)));
-    const cellW = Math.max(20, parseInt(document.getElementById('cellW').value || '55', 10));
-    const cellH = Math.max(20, parseInt(document.getElementById('cellH').value || '55', 10));
-    const pageSize = document.getElementById('pageSize').value;
-    const orientation = document.getElementById('orientation').value;
-    const border = document.getElementById('border').value === '1';
-    const printName = document.getElementById('printName').value === '1';
+if(count%cols===0){
+x=15;
+y+=cellH+10;
+if(y+cellH>280){
+doc.addPage();
+y=15;
+}
+}
+}
 
-    setStatus('生成 PDF 中…');
+const outName=sanitizeFileName(
+document.getElementById('fileNameInput').value
+);
 
-    try {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ unit: 'mm', format: pageSize, orientation });
+const blob=doc.output('blob');
+latestPdfBlob=blob;
+latestFileName=outName;
+shareBtn.disabled=false;
+setStatus('PDF 已產生');
+});
 
-      const margin = 12;
-      // 依 cell 尺寸估算要把圖縮到多少像素（粗略：你原本用 mm*10，沿用）
-      const maxPx = Math.round(Math.max(cellW, cellH) * 10);
+shareBtn.addEventListener('click',async()=>{
+if(!latestPdfBlob)return;
 
-      // 先批次縮圖（降低 PDF 產生時間與大小）
-      const resized = [];
-      for (let i = 0; i < images.length; i++) {
-        setStatus(`處理圖片 ${i + 1}/${images.length}…`);
-        const d = await resizeDataUrlToFit(images[i].dataUrl, maxPx);
-        resized.push({ name: images[i].name, dataUrl: d });
-      }
+if(isDesktop()){
+downloadBlob(latestPdfBlob,latestFileName);
+setStatus('已下載 PDF，請用 LINE 上傳');
+return;
+}
 
-      // 產生「表格資料」：每格先放空字串，等 didDrawCell 時把圖片畫上去
-      const rows = [];
-      for (let i = 0; i < resized.length; i += cols) {
-        const row = [];
-        for (let c = 0; c < cols; c++) {
-          const item = resized[i + c];
-          row.push(item ? (printName ? item.name : ' ') : ' ');
-        }
-        rows.push(row);
-      }
+if(navigator.share&&navigator.canShare){
+try{
+const file=new File([latestPdfBlob],latestFileName,{type:'application/pdf'});
+if(navigator.canShare({files:[file]})){
+await navigator.share({files:[file]});
+setStatus('請選 LINE');
+return;
+}
+}catch(e){}
+}
 
-      doc.autoTable({
-        startY: margin,
-        head: [],
-        body: rows,
-        theme: 'plain',
-        styles: {
-          cellPadding: 2,
-          fontSize: 8,
-          lineWidth: border ? 0.2 : 0,
-          lineColor: 50
-        },
-        margin: { left: margin, right: margin },
-        tableWidth: 'auto',
-        columnStyles: Object.fromEntries(
-          Array.from({ length: cols }, (_, i) => [i, { cellWidth: cellW }])
-        ),
-        didParseCell: (data) => {
-          data.cell.styles.minCellHeight = cellH; // 固定高度
-        },
-        didDrawCell: (data) => {
-          const r = data.row.index;
-          const c = data.column.index;
-          const idx = r * cols + c;
-          const item = resized[idx];
-          if (!item) return;
-
-          const nameH = printName ? 6 : 0;
-
-          const x = data.cell.x + 2;
-          const y = data.cell.y + 2;
-          const w = data.cell.width - 4;
-          const h = data.cell.height - 4 - nameH;
-
-          try {
-            doc.addImage(item.dataUrl, 'PNG', x, y, w, h, undefined, 'FAST');
-          } catch (e) {
-            console.warn('addImage failed', e);
-          }
-
-          if (printName) {
-            doc.setFontSize(8);
-            const textY = data.cell.y + data.cell.height - 2;
-            const t = item.name.length > 40 ? item.name.slice(0, 37) + '…' : item.name;
-            doc.text(t, data.cell.x + 2, textY);
-          }
-        }
-      });
-
-      const stamp = new Date();
-      const yyyy = stamp.getFullYear();
-      const mm = String(stamp.getMonth() + 1).padStart(2, '0');
-      const dd = String(stamp.getDate()).padStart(2, '0');
-      const outName = `photos_table_${yyyy}${mm}${dd}.pdf`;
-
-      // ✅ 只產生 Blob、暫存起來，不在這裡直接分享
-      const pdfBlob = doc.output('blob');
-      latestPdfBlob = pdfBlob;
-      latestFileName = outName;
-
-      shareBtn.disabled = false;
-      setStatus('PDF 已產生完成，可點「分享 LINE」');
-
-    } catch (err) {
-      console.error(err);
-      setStatus('生成失敗：可能照片太大或格式特殊，請換一批或調小格子尺寸');
-      shareBtn.disabled = true;
-      latestPdfBlob = null;
-      latestFileName = null;
-    }
-  });
-
-  shareBtn.addEventListener('click', async () => {
-    if (!latestPdfBlob || !latestFileName) {
-      setStatus('請先產生 PDF');
-      return;
-    }
-
-    setStatus('開啟分享面板中…');
-
-    const shared = await trySharePdfBlob(latestPdfBlob, latestFileName);
-
-    if (shared) {
-      setStatus('請選 LINE → 再選好友');
-    } else {
-      // 不支援 share(files) 或使用者取消：提供下載作為替代
-      downloadBlob(latestPdfBlob, latestFileName);
-      setStatus('此瀏覽器不支援直接分享檔案（或已取消），已改為下載 PDF');
-    }
-  });
+downloadBlob(latestPdfBlob,latestFileName);
+setStatus('已改為下載');
+});
 </script>
 </body>
 </html>
