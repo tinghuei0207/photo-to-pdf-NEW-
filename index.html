@@ -10,33 +10,19 @@ body{font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",san
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
 label{display:grid;gap:6px;font-size:14px}
 input[type="number"],input[type="text"],select{
-  padding:8px;border:1px solid #ccc;border-radius:8px;min-width:120px
-}
+padding:8px;border:1px solid #ccc;border-radius:8px;min-width:120px}
 input[type="file"]{padding:6px}
 button{padding:10px 14px;border:0;border-radius:10px;cursor:pointer}
 button.primary{background:#111;color:#fff}
 button.secondary{background:#eee}
 button:disabled{opacity:.45;cursor:not-allowed}
-
-.preview{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.preview{margin-top:18px;display:grid;
+grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
 .card{border:1px solid #ddd;border-radius:12px;padding:10px}
 .thumb{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;background:#f5f5f5}
 .fn{font-size:12px;margin-top:6px;word-break:break-all}
 .bar{margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .status{font-size:14px;color:#333}
-
-/* ✅ 提示框 */
-.notice{
-  margin-top:14px;
-  border:1px solid #f1d28b;
-  background:#fff7e6;
-  border-radius:12px;
-  padding:12px 12px;
-  display:none;
-}
-.notice h4{margin:0 0 6px 0;font-size:14px}
-.notice p{margin:0;font-size:13px;line-height:1.5;color:#333}
-.notice .actions{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -47,47 +33,33 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 <h2>照片 → 表格 → PDF</h2>
 
-<!-- ✅ LINE 內建瀏覽器提示區 -->
-<div class="notice" id="lineNotice">
-  <h4>LINE 內建瀏覽器限制</h4>
-  <p>
-    你目前是在 LINE 內建瀏覽器開啟。iOS 在這個環境下通常不會顯示「LINE」作為檔案分享目標，
-    所以你按「分享 LINE」時看不到 LINE 是正常的。
-    <br/>請點下方按鈕改用 Safari 開啟，再分享就會出現 LINE。
-  </p>
-  <div class="actions">
-    <button class="primary" id="openSafariBtn">在 Safari 開啟</button>
-    <button class="secondary" id="hideNoticeBtn">知道了</button>
-  </div>
-</div>
-
 <div class="row">
-  <label>匯入照片
-    <input id="files" type="file" accept="image/*" multiple>
-  </label>
+<label>匯入照片
+<input id="files" type="file" accept="image/*" multiple>
+</label>
 
-  <label>PDF 檔名
-    <input id="fileNameInput" type="text" placeholder="例如：通譯紀錄.pdf">
-  </label>
+<label>PDF 檔名
+<input id="fileNameInput" type="text" placeholder="例如：通譯紀錄.pdf">
+</label>
 
-  <label>每列幾張
-    <input id="cols" type="number" min="1" max="6" value="3">
-  </label>
+<label>每列幾張
+<input id="cols" type="number" min="1" max="6" value="3">
+</label>
 
-  <label>格子寬(mm)
-    <input id="cellW" type="number" value="55">
-  </label>
+<label>格子寬(mm)
+<input id="cellW" type="number" value="55">
+</label>
 
-  <label>格子高(mm)
-    <input id="cellH" type="number" value="55">
-  </label>
+<label>格子高(mm)
+<input id="cellH" type="number" value="55">
+</label>
 </div>
 
 <div class="bar">
-  <button class="secondary" id="clearBtn">清空</button>
-  <button class="primary" id="genBtn">產生 PDF</button>
-  <button class="primary" id="shareBtn" disabled>分享 LINE</button>
-  <span class="status" id="status"></span>
+<button class="secondary" id="clearBtn">清空</button>
+<button class="primary" id="genBtn">產生 PDF</button>
+<button class="primary" id="shareBtn" disabled>分享 LINE</button>
+<span class="status" id="status"></span>
 </div>
 
 <div class="preview" id="preview"></div>
@@ -100,10 +72,6 @@ const genBtn=document.getElementById('genBtn');
 const clearBtn=document.getElementById('clearBtn');
 const shareBtn=document.getElementById('shareBtn');
 
-const lineNotice=document.getElementById('lineNotice');
-const openSafariBtn=document.getElementById('openSafariBtn');
-const hideNoticeBtn=document.getElementById('hideNoticeBtn');
-
 let images=[];
 let latestPdfBlob=null;
 let latestFileName=null;
@@ -111,225 +79,158 @@ let latestFileName=null;
 function setStatus(msg){statusEl.textContent=msg||'';}
 
 function sanitizeFileName(name){
-  if(!name) return 'photos_table.pdf';
-  let safe=name.trim().replace(/[\\/:*?"<>|]/g,'-');
-  if(!safe.toLowerCase().endsWith('.pdf')) safe+='.pdf';
-  return safe;
+if(!name)return'photos_table.pdf';
+let safe=name.trim().replace(/[\\/:*?"<>|]/g,'-');
+if(!safe.toLowerCase().endsWith('.pdf'))safe+='.pdf';
+return safe;
 }
 
 function isDesktop(){
-  const ua=navigator.userAgent||'';
-  return /Win|Mac|Linux/.test(ua)&&!/Android|iPhone|iPad|iPod/.test(ua);
+const ua=navigator.userAgent||'';
+return /Win|Mac|Linux/.test(ua)&&!/Android|iPhone|iPad|iPod/.test(ua);
 }
-
-/* ✅ LINE 內建瀏覽器偵測（iOS/Android 都顧到） */
-function isLineInApp(){
-  const ua=(navigator.userAgent||'').toLowerCase();
-  return ua.includes('line');
-}
-
-/* ✅ 顯示/隱藏 LINE 提示 */
-function showLineNotice(){
-  lineNotice.style.display='block';
-  lineNotice.scrollIntoView({behavior:'smooth',block:'start'});
-}
-function hideLineNotice(){
-  lineNotice.style.display='none';
-}
-
-/* ✅ 在 Safari 開啟（iOS：會跳 Safari；Android：跳到預設瀏覽器） */
-function openInSafari(){
-  // 用同一個 URL 開啟即可。LINE 內建瀏覽器點擊外開通常會跳出。
-  // iOS 上 LINE 會提供「在 Safari 開啟」，這裡用 window.open 觸發外部開啟。
-  const url = location.href;
-  window.open(url, '_blank', 'noopener,noreferrer');
-}
-
-openSafariBtn.addEventListener('click', openInSafari);
-hideNoticeBtn.addEventListener('click', hideLineNotice);
 
 function downloadBlob(blob,name){
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download=name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),60000);
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a');
+a.href=url;a.download=name;
+document.body.appendChild(a);
+a.click();
+a.remove();
+setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 
 function readFile(file){
-  return new Promise((res,rej)=>{
-    const fr=new FileReader();
-    fr.onload=()=>res(fr.result);
-    fr.onerror=rej;
-    fr.readAsDataURL(file);
-  });
+return new Promise((res,rej)=>{
+const fr=new FileReader();
+fr.onload=()=>res(fr.result);
+fr.onerror=rej;
+fr.readAsDataURL(file);
+});
 }
 
 function resize(dataUrl,maxPx){
-  return new Promise((res,rej)=>{
-    const img=new Image();
-    img.onload=()=>{
-      const scale=Math.min(1,maxPx/Math.max(img.naturalWidth,img.naturalHeight));
-      const w=Math.round(img.naturalWidth*scale);
-      const h=Math.round(img.naturalHeight*scale);
-      const c=document.createElement('canvas');
-      c.width=w; c.height=h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
-      res(c.toDataURL('image/png'));
-    };
-    img.onerror=rej;
-    img.src=dataUrl;
-  });
+return new Promise((res,rej)=>{
+const img=new Image();
+img.onload=()=>{
+const scale=Math.min(1,maxPx/Math.max(img.naturalWidth,img.naturalHeight));
+const w=img.naturalWidth*scale;
+const h=img.naturalHeight*scale;
+const c=document.createElement('canvas');
+c.width=w;c.height=h;
+c.getContext('2d').drawImage(img,0,0,w,h);
+res(c.toDataURL('image/png'));
+};
+img.onerror=rej;
+img.src=dataUrl;
+});
 }
 
 filesEl.addEventListener('change',async e=>{
-  const list=Array.from(e.target.files||[]);
-  for(const f of list){
-    const d=await readFile(f);
-    images.push({name:f.name,dataUrl:d});
-  }
-  renderPreview();
-  shareBtn.disabled=true;
-  latestPdfBlob=null;
-  filesEl.value='';
+const list=Array.from(e.target.files||[]);
+for(const f of list){
+const d=await readFile(f);
+images.push({name:f.name,dataUrl:d});
+}
+renderPreview();
+shareBtn.disabled=true;
+latestPdfBlob=null;
+filesEl.value='';
 });
 
 function renderPreview(){
-  previewEl.innerHTML='';
-  for(const i of images){
-    const div=document.createElement('div');
-    div.className='card';
-    div.innerHTML=`<img class="thumb" src="${i.dataUrl}">
-      <div class="fn">${i.name}</div>`;
-    previewEl.appendChild(div);
-  }
+previewEl.innerHTML='';
+for(const i of images){
+const div=document.createElement('div');
+div.className='card';
+div.innerHTML=`<img class="thumb" src="${i.dataUrl}">
+<div class="fn">${i.name}</div>`;
+previewEl.appendChild(div);
+}
 }
 
 clearBtn.onclick=()=>{
-  images=[];
-  renderPreview();
-  shareBtn.disabled=true;
-  latestPdfBlob=null;
-  setStatus('已清空');
+images=[];
+renderPreview();
+shareBtn.disabled=true;
+latestPdfBlob=null;
+setStatus('已清空');
 };
 
 genBtn.addEventListener('click',async()=>{
-  if(!images.length){setStatus('請先匯入照片');return;}
+if(!images.length){setStatus('請先匯入照片');return;}
 
-  setStatus('生成中...');
-  shareBtn.disabled=true;
+setStatus('生成中...');
+shareBtn.disabled=true;
 
-  const {jsPDF}=window.jspdf;
-  const doc=new jsPDF({unit:'mm',format:'a4'});
+const {jsPDF}=window.jspdf;
+const doc=new jsPDF({unit:'mm',format:'a4'});
 
-  const cols=parseInt(document.getElementById('cols').value||3,10);
-  const cellW=parseInt(document.getElementById('cellW').value||55,10);
-  const cellH=parseInt(document.getElementById('cellH').value||55,10);
+const cols=parseInt(document.getElementById('cols').value||3);
+const cellW=parseInt(document.getElementById('cellW').value||55);
+const cellH=parseInt(document.getElementById('cellH').value||55);
 
-  const maxPx=Math.max(cellW,cellH)*10;
-  const resized=[];
+const maxPx=Math.max(cellW,cellH)*10;
+const resized=[];
 
-  for(let i=0;i<images.length;i++){
-    setStatus(`處理 ${i+1}/${images.length}`);
-    const d=await resize(images[i].dataUrl,maxPx);
-    resized.push(d);
-  }
+for(let i=0;i<images.length;i++){
+setStatus(`處理 ${i+1}/${images.length}`);
+const d=await resize(images[i].dataUrl,maxPx);
+resized.push(d);
+}
 
-  let x=15,y=15;
-  let count=0;
+let x=15,y=15;
+let count=0;
 
-  for(let i=0;i<resized.length;i++){
-    doc.addImage(resized[i],'PNG',x,y,cellW,cellH);
-    x+=cellW+5;
-    count++;
+for(let i=0;i<resized.length;i++){
+doc.addImage(resized[i],'PNG',x,y,cellW,cellH);
+x+=cellW+5;
+count++;
 
-    if(count%cols===0){
-      x=15;
-      y+=cellH+10;
-      if(y+cellH>280){
-        doc.addPage();
-        y=15;
-      }
-    }
-  }
+if(count%cols===0){
+x=15;
+y+=cellH+10;
+if(y+cellH>280){
+doc.addPage();
+y=15;
+}
+}
+}
 
-  const outName=sanitizeFileName(document.getElementById('fileNameInput').value);
+const outName=sanitizeFileName(
+document.getElementById('fileNameInput').value
+);
 
-  // ✅ 強制 application/pdf，讓 iOS/分享面板更穩
-  const rawBlob = doc.output('blob');
-  const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
-
-  latestPdfBlob=pdfBlob;
-  latestFileName=outName;
-  shareBtn.disabled=false;
-  setStatus('PDF 已產生');
+const blob=doc.output('blob');
+latestPdfBlob=blob;
+latestFileName=outName;
+shareBtn.disabled=false;
+setStatus('PDF 已產生');
 });
-
-function makePdfFile(){
-  const safeName = sanitizeFileName(latestFileName || 'photos_table.pdf');
-  return new File([latestPdfBlob], safeName, {
-    type: 'application/pdf',
-    lastModified: Date.now()
-  });
-}
-
-async function tryNativeShareFile(){
-  if(!navigator.share) return false;
-
-  const file = makePdfFile();
-
-  if(navigator.canShare){
-    if(!navigator.canShare({ files: [file] })) return false;
-  }
-
-  await navigator.share({
-    title: file.name,
-    text: 'PDF 檔案',
-    files: [file]
-  });
-
-  return true;
-}
 
 shareBtn.addEventListener('click',async()=>{
-  if(!latestPdfBlob){ setStatus('請先產生 PDF'); return; }
+if(!latestPdfBlob)return;
 
-  // ✅ 如果在 LINE 內建瀏覽器：先提示去 Safari
-  if(isLineInApp()){
-    showLineNotice();
-    setStatus('請改用 Safari 開啟後再分享（LINE 內建瀏覽器不會顯示 LINE 選項）');
-    return;
-  }
-
-  // 桌機：下載
-  if(isDesktop()){
-    downloadBlob(latestPdfBlob,latestFileName);
-    setStatus('已下載 PDF，請用 LINE 上傳');
-    return;
-  }
-
-  setStatus('嘗試開啟分享面板...');
-
-  try{
-    const ok = await tryNativeShareFile();
-    if(ok){
-      setStatus('請在分享面板選 LINE');
-      return;
-    }
-  }catch(e){
-    // 使用者取消或系統限制都可能到這裡
-  }
-
-  downloadBlob(latestPdfBlob,latestFileName);
-  setStatus('此裝置/瀏覽器不支援直接分享 PDF，已改為下載');
-});
-
-// ✅ 一進頁面如果就偵測到是 LINE 內開，先提示一次（不干擾操作）
-if(isLineInApp()){
-  showLineNotice();
+if(isDesktop()){
+downloadBlob(latestPdfBlob,latestFileName);
+setStatus('已下載 PDF，請用 LINE 上傳');
+return;
 }
+
+if(navigator.share&&navigator.canShare){
+try{
+const file=new File([latestPdfBlob],latestFileName,{type:'application/pdf'});
+if(navigator.canShare({files:[file]})){
+await navigator.share({files:[file]});
+setStatus('請選 LINE');
+return;
+}
+}catch(e){}
+}
+
+downloadBlob(latestPdfBlob,latestFileName);
+setStatus('已改為下載');
+});
 </script>
 </body>
 </html>
