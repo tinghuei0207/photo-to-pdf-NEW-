@@ -19,14 +19,24 @@ button.secondary{background:#eee}
 button.ghost{background:#fff;border:1px solid #ddd}
 button:disabled{opacity:.45;cursor:not-allowed}
 
-.preview{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.preview{margin-top:18px;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
 .card{border:1px solid #ddd;border-radius:12px;padding:10px}
-.thumb{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;background:#f5f5f5}
+
+/* ✅ 預覽：固定高度 + contain（不裁切、不變形） */
+.thumb{
+  width:100%;
+  height:140px;          /* 想大一點可改 160 */
+  object-fit:contain;    /* ✅ 保留原比例 */
+  border-radius:10px;
+  background:#f5f5f5
+}
+
 .fn{font-size:12px;margin-top:6px;word-break:break-all}
 .bar{margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .status{font-size:14px;color:#333}
 
-/* ✅ 提示框 */
+/* ✅ LINE 內建瀏覽器提示 */
 .notice{
   margin-top:14px;
   border:1px solid #f1d28b;
@@ -47,6 +57,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
   background:#fff;border:1px solid #ddd;border-radius:10px;
   padding:10px;font-size:12px;word-break:break-all
 }
+.small{font-size:12px;color:#555;margin-top:6px}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -57,21 +68,23 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 <h2>照片 → 表格 → PDF</h2>
 
-<!-- ✅ LINE 內建瀏覽器提示區 -->
 <div class="notice" id="lineNotice">
   <h4>LINE 內建瀏覽器限制</h4>
   <p>
     你目前是在 LINE 內建瀏覽器開啟。iOS 在這個環境下通常不會顯示「LINE」作為檔案分享目標，
-    因此「分享 LINE」看不到 LINE 是正常的。<br>
-    請用 LINE 右下角 <span class="kbd">⋯</span> → <b>在 Safari 開啟</b>，再分享就會出現 LINE。<br>
-    如果你找不到選項，也可以先把網址複製，貼到 Safari 開啟。
+    因此你按「分享 LINE」看不到 LINE 是正常的。<br>
+    ✅ 最穩做法：請點右下角 <span class="kbd">⋯</span> → <b>在 Safari 開啟</b>。<br>
+    或者按「複製網址」，到 Safari 貼上開啟。
   </p>
 
   <div class="urlBox" id="currentUrlBox"></div>
+  <div class="small" id="afterClickTip" style="display:none;">
+    已嘗試外開。若沒有跳轉，表示被 LINE 擋住：請用右下角 <span class="kbd">⋯</span> 的「在 Safari 開啟」。
+  </div>
 
   <div class="actions">
-    <button class="primary" id="copyUrlBtn">複製網址</button>
-    <button class="ghost" id="tryOpenBtn">嘗試外開（可能會被擋）</button>
+    <button class="primary" id="openSafariBtn">在 Safari 開啟</button>
+    <button class="ghost" id="copyUrlBtn">複製網址</button>
     <button class="secondary" id="hideNoticeBtn">知道了</button>
   </div>
 </div>
@@ -116,10 +129,11 @@ const clearBtn=document.getElementById('clearBtn');
 const shareBtn=document.getElementById('shareBtn');
 
 const lineNotice=document.getElementById('lineNotice');
+const openSafariBtn=document.getElementById('openSafariBtn');
 const copyUrlBtn=document.getElementById('copyUrlBtn');
-const tryOpenBtn=document.getElementById('tryOpenBtn');
 const hideNoticeBtn=document.getElementById('hideNoticeBtn');
 const currentUrlBox=document.getElementById('currentUrlBox');
+const afterClickTip=document.getElementById('afterClickTip');
 
 let images=[];
 let latestPdfBlob=null;
@@ -147,44 +161,44 @@ function isLineInApp(){
 function showLineNotice(){
   currentUrlBox.textContent = location.href;
   lineNotice.style.display='block';
-  lineNotice.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function hideLineNotice(){
   lineNotice.style.display='none';
 }
 
-/* ✅ 複製網址（失敗就改用 prompt 讓你手動複製） */
 async function copyUrl(){
   const url = location.href;
   try{
     await navigator.clipboard.writeText(url);
     setStatus('已複製網址，請到 Safari 貼上開啟');
   }catch(e){
-    // iOS/LINE 內常常不給 clipboard，退回 prompt
     window.prompt('請長按全選並複製這個網址：', url);
     setStatus('請複製網址後到 Safari 開啟');
   }
 }
 
-/* ✅ 嘗試外開（可能被擋） */
-function tryOpenExternal(){
+function openSafariFallbackFirst(){
+  showLineNotice();
+  afterClickTip.style.display = 'block';
+
   const url = location.href;
   const w = window.open(url, '_blank');
   if(!w){
-    // 被擋就提示使用者走右下角選單
-    setStatus('LINE 內建瀏覽器可能阻擋外開，請用右下角 ⋯ → 在 Safari 開啟');
+    setStatus('LINE 可能阻擋外開：請用右下角 ⋯ → 在 Safari 開啟');
+  }else{
+    setStatus('已嘗試外開（若沒跳轉請用右下角 ⋯）');
   }
 }
 
+openSafariBtn.addEventListener('click', openSafariFallbackFirst);
 copyUrlBtn.addEventListener('click', copyUrl);
-tryOpenBtn.addEventListener('click', tryOpenExternal);
 hideNoticeBtn.addEventListener('click', hideLineNotice);
 
 function downloadBlob(blob,name){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url; a.download=name;
+  a.href=url;a.download=name;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -208,7 +222,7 @@ function resize(dataUrl,maxPx){
       const w=Math.round(img.naturalWidth*scale);
       const h=Math.round(img.naturalHeight*scale);
       const c=document.createElement('canvas');
-      c.width=w; c.height=h;
+      c.width=w;c.height=h;
       c.getContext('2d').drawImage(img,0,0,w,h);
       res(c.toDataURL('image/png'));
     };
@@ -273,17 +287,32 @@ genBtn.addEventListener('click',async()=>{
   let x=15,y=15;
   let count=0;
 
-  for(let i=0;i<resized.length;i++){
-    doc.addImage(resized[i],'PNG',x,y,cellW,cellH);
-    x+=cellW+5;
+  // ✅ PDF：固定格子，但圖片等比例縮放置中，不變形
+  for (let i = 0; i < resized.length; i++) {
+    const imgData = resized[i];
+
+    const props = doc.getImageProperties(imgData);
+    const iw = props.width;
+    const ih = props.height;
+
+    const scale = Math.min(cellW / iw, cellH / ih);
+    const dw = iw * scale;
+    const dh = ih * scale;
+
+    const dx = x + (cellW - dw) / 2;
+    const dy = y + (cellH - dh) / 2;
+
+    doc.addImage(imgData, 'PNG', dx, dy, dw, dh);
+
+    x += cellW + 5;
     count++;
 
-    if(count%cols===0){
-      x=15;
-      y+=cellH+10;
-      if(y+cellH>280){
+    if (count % cols === 0) {
+      x = 15;
+      y += cellH + 10;
+      if (y + cellH > 280) {
         doc.addPage();
-        y=15;
+        y = 15;
       }
     }
   }
@@ -311,7 +340,6 @@ async function tryNativeShareFile(){
   if(!navigator.share) return false;
 
   const file = makePdfFile();
-
   if(navigator.canShare){
     if(!navigator.canShare({ files: [file] })) return false;
   }
@@ -330,7 +358,7 @@ shareBtn.addEventListener('click',async()=>{
 
   if(isLineInApp()){
     showLineNotice();
-    setStatus('請用右下角 ⋯ → 在 Safari 開啟（LINE 內建瀏覽器無法顯示 LINE 分享）');
+    setStatus('LINE 內建瀏覽器無法顯示 LINE 分享：請用右下角 ⋯ → 在 Safari 開啟');
     return;
   }
 
@@ -354,7 +382,6 @@ shareBtn.addEventListener('click',async()=>{
   setStatus('此裝置/瀏覽器不支援直接分享 PDF，已改為下載');
 });
 
-// 一進頁面就提示（可手動關閉）
 if(isLineInApp()){
   showLineNotice();
 }
