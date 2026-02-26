@@ -34,32 +34,32 @@ grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
 <h2>照片 → 表格 → PDF</h2>
 
 <div class="row">
-<label>匯入照片
-<input id="files" type="file" accept="image/*" multiple>
-</label>
+  <label>匯入照片
+    <input id="files" type="file" accept="image/*" multiple>
+  </label>
 
-<label>PDF 檔名
-<input id="fileNameInput" type="text" placeholder="例如：通譯紀錄.pdf">
-</label>
+  <label>PDF 檔名
+    <input id="fileNameInput" type="text" placeholder="例如：通譯紀錄.pdf">
+  </label>
 
-<label>每列幾張
-<input id="cols" type="number" min="1" max="6" value="3">
-</label>
+  <label>每列幾張
+    <input id="cols" type="number" min="1" max="6" value="3">
+  </label>
 
-<label>格子寬(mm)
-<input id="cellW" type="number" value="55">
-</label>
+  <label>格子寬(mm)
+    <input id="cellW" type="number" value="55">
+  </label>
 
-<label>格子高(mm)
-<input id="cellH" type="number" value="55">
-</label>
+  <label>格子高(mm)
+    <input id="cellH" type="number" value="55">
+  </label>
 </div>
 
 <div class="bar">
-<button class="secondary" id="clearBtn">清空</button>
-<button class="primary" id="genBtn">產生 PDF</button>
-<button class="primary" id="shareBtn" disabled>分享 LINE</button>
-<span class="status" id="status"></span>
+  <button class="secondary" id="clearBtn">清空</button>
+  <button class="primary" id="genBtn">產生 PDF</button>
+  <button class="primary" id="shareBtn" disabled>分享 LINE</button>
+  <span class="status" id="status"></span>
 </div>
 
 <div class="preview" id="preview"></div>
@@ -79,157 +79,192 @@ let latestFileName=null;
 function setStatus(msg){statusEl.textContent=msg||'';}
 
 function sanitizeFileName(name){
-if(!name)return'photos_table.pdf';
-let safe=name.trim().replace(/[\\/:*?"<>|]/g,'-');
-if(!safe.toLowerCase().endsWith('.pdf'))safe+='.pdf';
-return safe;
+  if(!name) return 'photos_table.pdf';
+  let safe=name.trim().replace(/[\\/:*?"<>|]/g,'-');
+  if(!safe.toLowerCase().endsWith('.pdf')) safe+='.pdf';
+  return safe;
 }
 
 function isDesktop(){
-const ua=navigator.userAgent||'';
-return /Win|Mac|Linux/.test(ua)&&!/Android|iPhone|iPad|iPod/.test(ua);
+  const ua=navigator.userAgent||'';
+  return /Win|Mac|Linux/.test(ua)&&!/Android|iPhone|iPad|iPod/.test(ua);
 }
 
 function downloadBlob(blob,name){
-const url=URL.createObjectURL(blob);
-const a=document.createElement('a');
-a.href=url;a.download=name;
-document.body.appendChild(a);
-a.click();
-a.remove();
-setTimeout(()=>URL.revokeObjectURL(url),60000);
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 
 function readFile(file){
-return new Promise((res,rej)=>{
-const fr=new FileReader();
-fr.onload=()=>res(fr.result);
-fr.onerror=rej;
-fr.readAsDataURL(file);
-});
+  return new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onload=()=>res(fr.result);
+    fr.onerror=rej;
+    fr.readAsDataURL(file);
+  });
 }
 
 function resize(dataUrl,maxPx){
-return new Promise((res,rej)=>{
-const img=new Image();
-img.onload=()=>{
-const scale=Math.min(1,maxPx/Math.max(img.naturalWidth,img.naturalHeight));
-const w=img.naturalWidth*scale;
-const h=img.naturalHeight*scale;
-const c=document.createElement('canvas');
-c.width=w;c.height=h;
-c.getContext('2d').drawImage(img,0,0,w,h);
-res(c.toDataURL('image/png'));
-};
-img.onerror=rej;
-img.src=dataUrl;
-});
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1,maxPx/Math.max(img.naturalWidth,img.naturalHeight));
+      const w=Math.round(img.naturalWidth*scale);
+      const h=Math.round(img.naturalHeight*scale);
+      const c=document.createElement('canvas');
+      c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      res(c.toDataURL('image/png'));
+    };
+    img.onerror=rej;
+    img.src=dataUrl;
+  });
 }
 
 filesEl.addEventListener('change',async e=>{
-const list=Array.from(e.target.files||[]);
-for(const f of list){
-const d=await readFile(f);
-images.push({name:f.name,dataUrl:d});
-}
-renderPreview();
-shareBtn.disabled=true;
-latestPdfBlob=null;
-filesEl.value='';
+  const list=Array.from(e.target.files||[]);
+  for(const f of list){
+    const d=await readFile(f);
+    images.push({name:f.name,dataUrl:d});
+  }
+  renderPreview();
+  shareBtn.disabled=true;
+  latestPdfBlob=null;
+  filesEl.value='';
 });
 
 function renderPreview(){
-previewEl.innerHTML='';
-for(const i of images){
-const div=document.createElement('div');
-div.className='card';
-div.innerHTML=`<img class="thumb" src="${i.dataUrl}">
-<div class="fn">${i.name}</div>`;
-previewEl.appendChild(div);
-}
+  previewEl.innerHTML='';
+  for(const i of images){
+    const div=document.createElement('div');
+    div.className='card';
+    div.innerHTML=`<img class="thumb" src="${i.dataUrl}">
+      <div class="fn">${i.name}</div>`;
+    previewEl.appendChild(div);
+  }
 }
 
 clearBtn.onclick=()=>{
-images=[];
-renderPreview();
-shareBtn.disabled=true;
-latestPdfBlob=null;
-setStatus('已清空');
+  images=[];
+  renderPreview();
+  shareBtn.disabled=true;
+  latestPdfBlob=null;
+  setStatus('已清空');
 };
 
 genBtn.addEventListener('click',async()=>{
-if(!images.length){setStatus('請先匯入照片');return;}
+  if(!images.length){setStatus('請先匯入照片');return;}
 
-setStatus('生成中...');
-shareBtn.disabled=true;
+  setStatus('生成中...');
+  shareBtn.disabled=true;
 
-const {jsPDF}=window.jspdf;
-const doc=new jsPDF({unit:'mm',format:'a4'});
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
 
-const cols=parseInt(document.getElementById('cols').value||3);
-const cellW=parseInt(document.getElementById('cellW').value||55);
-const cellH=parseInt(document.getElementById('cellH').value||55);
+  const cols=parseInt(document.getElementById('cols').value||3,10);
+  const cellW=parseInt(document.getElementById('cellW').value||55,10);
+  const cellH=parseInt(document.getElementById('cellH').value||55,10);
 
-const maxPx=Math.max(cellW,cellH)*10;
-const resized=[];
+  const maxPx=Math.max(cellW,cellH)*10;
+  const resized=[];
 
-for(let i=0;i<images.length;i++){
-setStatus(`處理 ${i+1}/${images.length}`);
-const d=await resize(images[i].dataUrl,maxPx);
-resized.push(d);
-}
+  for(let i=0;i<images.length;i++){
+    setStatus(`處理 ${i+1}/${images.length}`);
+    const d=await resize(images[i].dataUrl,maxPx);
+    resized.push(d);
+  }
 
-let x=15,y=15;
-let count=0;
+  let x=15,y=15;
+  let count=0;
 
-for(let i=0;i<resized.length;i++){
-doc.addImage(resized[i],'PNG',x,y,cellW,cellH);
-x+=cellW+5;
-count++;
+  for(let i=0;i<resized.length;i++){
+    doc.addImage(resized[i],'PNG',x,y,cellW,cellH);
+    x+=cellW+5;
+    count++;
 
-if(count%cols===0){
-x=15;
-y+=cellH+10;
-if(y+cellH>280){
-doc.addPage();
-y=15;
-}
-}
-}
+    if(count%cols===0){
+      x=15;
+      y+=cellH+10;
+      if(y+cellH>280){
+        doc.addPage();
+        y=15;
+      }
+    }
+  }
 
-const outName=sanitizeFileName(
-document.getElementById('fileNameInput').value
-);
+  const outName=sanitizeFileName(document.getElementById('fileNameInput').value);
 
-const blob=doc.output('blob');
-latestPdfBlob=blob;
-latestFileName=outName;
-shareBtn.disabled=false;
-setStatus('PDF 已產生');
+  // ✅ 強制 Blob type = application/pdf（關鍵）
+  const rawBlob = doc.output('blob');
+  const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
+
+  latestPdfBlob=pdfBlob;
+  latestFileName=outName;
+  shareBtn.disabled=false;
+  setStatus('PDF 已產生');
 });
 
+function makePdfFile(){
+  // ✅ 用 File 包起來，分享面板更容易辨識
+  const safeName = latestFileName || 'photos_table.pdf';
+  const blob = latestPdfBlob;
+  return new File([blob], safeName, {
+    type: 'application/pdf',
+    lastModified: Date.now()
+  });
+}
+
+async function tryNativeShareFile(){
+  if(!navigator.share) return false;
+
+  const file = makePdfFile();
+
+  // 有 canShare 就先確認是否支援「檔案分享」
+  if(navigator.canShare){
+    if(!navigator.canShare({ files: [file] })) return false;
+  }
+
+  // iOS Safari 常常沒有 canShare，但 share(files) 仍可成功 → 直接 try
+  await navigator.share({
+    title: latestFileName || 'PDF',
+    text: 'PDF 檔案',
+    files: [file]
+  });
+
+  return true;
+}
+
 shareBtn.addEventListener('click',async()=>{
-if(!latestPdfBlob)return;
+  if(!latestPdfBlob){ setStatus('請先產生 PDF'); return; }
 
-if(isDesktop()){
-downloadBlob(latestPdfBlob,latestFileName);
-setStatus('已下載 PDF，請用 LINE 上傳');
-return;
-}
+  // 桌機：多數情況無法叫出手機系統分享面板，直接下載
+  if(isDesktop()){
+    downloadBlob(latestPdfBlob,latestFileName);
+    setStatus('已下載 PDF，請用 LINE 上傳');
+    return;
+  }
 
-if(navigator.share&&navigator.canShare){
-try{
-const file=new File([latestPdfBlob],latestFileName,{type:'application/pdf'});
-if(navigator.canShare({files:[file]})){
-await navigator.share({files:[file]});
-setStatus('請選 LINE');
-return;
-}
-}catch(e){}
-}
+  setStatus('嘗試開啟分享面板...');
 
-downloadBlob(latestPdfBlob,latestFileName);
-setStatus('已改為下載');
+  try{
+    const ok = await tryNativeShareFile();
+    if(ok){
+      setStatus('請在分享面板選 LINE');
+      return;
+    }
+  }catch(e){
+    // 使用者按取消也會丟錯誤，這裡不要嚇到人
+    // 若是 AbortError 多半是使用者取消
+  }
+
+  // fallback：下載讓你手動丟 LINE
+  downloadBlob(latestPdfBlob,latestFileName);
+  setStatus('此裝置/瀏覽器不支援直接分享 PDF，已改為下載');
 });
 </script>
 </body>
